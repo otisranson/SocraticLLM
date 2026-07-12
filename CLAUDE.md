@@ -35,7 +35,8 @@ Student-side dialogue is v1. Teacher-side curriculum upload and dashboard follow
 
 ## Repo Structure (target)
 
-Not yet scaffolded. Proposed shape, reflecting "two surfaces, one engine":
+Partially scaffolded — `socraticllm/curriculum/concept_graph.py`, `pyproject.toml`, and `tests/`
+exist; the rest doesn't yet. Proposed shape, reflecting "two surfaces, one engine":
 
 ```
 SocraticLLM/
@@ -123,8 +124,8 @@ Dropped from the old schema: `disclosure_level`. That was specific to the old vi
 - [x] TODO.md updated to match (this session, see below)
 - [x] Legacy transformer code extracted with history to `~/Projects/didactic-transformer` and removed from this repo
 - [ ] Remaining Open Design Questions below resolved
-- [ ] Repo restructured to target shape (`engine/`, `curriculum/`, `student/`, `teacher/`, `interface/`) — not started
-- [ ] Concept graph schema defined
+- [ ] Repo restructured to target shape (`engine/`, `curriculum/`, `student/`, `teacher/`, `interface/`) — `curriculum/` started, rest not yet
+- [x] Concept graph schema defined (`socraticllm/curriculum/concept_graph.py` — `Concept`, `ConceptGraph`; add/get, prerequisite lookup, cycle + dangling-reference validation, topological ordering; tests passing)
 - [ ] Student state schema redesigned and `learner/state.json` migrated (or moved) to it
 - [ ] LLM client wrapper implemented
 - [ ] Dialogue engine + guardrail (the hard constraint) implemented
@@ -138,7 +139,26 @@ Dropped from the old schema: `disclosure_level`. That was specific to the old vi
 
 Then resolved the legacy-code question: extracted `socraticllm/tokenizer/`, `socraticllm/model/`, `socraticllm/narration/`, `socraticllm/curriculum/lessons.py`, their tests, `examples/repl.py`, and `pyproject.toml` into a standalone repo at `~/Projects/didactic-transformer`, using `git-filter-repo` (installed via `pip install --user --break-system-packages`) so the extracted repo keeps real history for those paths. Two files (`socraticllm/model/attention.py`, `embeddings.py`) had uncommitted working-tree changes that predated this session — a real, tested `Embeddings.forward`/`MultiHeadAttention.forward` implementation that had never been committed — so those were copied into the new repo and committed there before removal here, rather than being lost. `origin` was auto-stripped from the new repo by `git-filter-repo`; it's local-only per the user's choice. The legacy code is now fully removed from this repo (`git rm -r socraticllm tests examples pyproject.toml`), staged but not committed.
 
-**Next task:** Commit the removal (currently staged) once reviewed, then start on the concept graph schema — everything else (student model, dialogue engine) depends on knowing its shape first. See `TODO.md` for the full build order.
+Then implemented the concept graph schema: `socraticllm/curriculum/concept_graph.py` (`Concept`
+dataclass — id, name, description, an optional `domain` tag for classification, and
+`prerequisites` as a list of concept ids for sequencing) and `ConceptGraph` (add/get,
+`prerequisites_of`, `validate()` which catches dangling prerequisite references and cycles via a
+three-color DFS, and `topological_order()`). Deliberately did not add a separate `Prerequisite`
+class — a plain list of ids on `Concept` covers what's needed so far; revisit if prerequisites
+need their own metadata (e.g. required vs. helpful) later. Also did not add a separate `Domain`
+class — `domain` is a free-text tag on `Concept` for now, not its own graph-level construct;
+`curriculum_id` on `ConceptGraph` is what one uploaded textbook maps to. Recreated `pyproject.toml`
+(package `socraticllm`, no dependencies yet) since it had been removed along with the rest of the
+legacy code. Found a working `.venv` already present with pytest installed — the venv-creation
+issue noted in `TODO.md`'s Environment section appears resolved; `tests/test_concept_graph.py`
+(9 cases: add/get, duplicate-id error, unknown-id error, prerequisite lookup, valid-graph pass,
+dangling-reference error, cycle error, topological order correctness, topological-order-on-cycle
+error) all pass via `.venv/bin/python -m pytest`.
+
+**Next task:** Student state schema — redesign `learner/state.json` so `concept_map` keys
+reference `ConceptGraph` concept ids per curriculum (see the proposed shape in the Student State
+Schema section above) rather than the old fixed 5-key map, and implement load/save. See `TODO.md`
+step 3.
 
 ---
 

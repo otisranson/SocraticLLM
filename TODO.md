@@ -11,10 +11,11 @@ Build in this order — each step unblocks the next:
 
 1. **Resolve the remaining Open Design Question in `CLAUDE.md`** — the `learner/` vs `student/`
    naming, and whether `learner/state.json` (old fixed schema) gets migrated or replaced.
-2. **Concept graph schema** — `socraticllm/curriculum/concept_graph.py`. Define `Concept`,
-   `Prerequisite`, `Domain` (or equivalent). This is the foundation: the student model's
-   `concept_map` keys reference these nodes, and the dialogue engine classifies problems against
-   this graph. Everything else depends on its shape.
+2. **Concept graph schema** — done. `socraticllm/curriculum/concept_graph.py`: `Concept`
+   (id, name, description, `domain` tag, `prerequisites` as a list of concept ids) and
+   `ConceptGraph` (add/get, `prerequisites_of`, `validate()` for dangling refs and cycles,
+   `topological_order()`). No separate `Prerequisite`/`Domain` classes — deferred until they need
+   their own fields. `tests/test_concept_graph.py` passing (9 cases).
 3. **Student state schema + persistence** — redesign `learner/state.json` per the proposed
    shape in `CLAUDE.md` (dynamic, per-curriculum `concept_map` instead of the old fixed 5-key
    one). Implement load/save.
@@ -45,6 +46,6 @@ Build in this order — each step unblocks the next:
 
 ## Environment
 
-- This machine has no pip/ensurepip; `python3 -m venv` fails because `python3.14-venv` isn't
-  installed (`apt install python3.14-venv`, needs sudo). Still unresolved from the prior effort —
-  will matter again once there's new code to test.
+- A working `.venv` (with pytest) already exists at the repo root and was used to install the
+  package (`pip install -e .`) and run tests. The venv-creation issue noted here by the prior
+  effort appears resolved — leaving this note in case it resurfaces.
