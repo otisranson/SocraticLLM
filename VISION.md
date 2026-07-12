@@ -2,210 +2,89 @@
 
 ## Vision
 
-An educational LLM that exposes its own internals as you interact with it. Not just a model — a window into one. Named after Socrates, who made the *process* of thinking visible rather than just producing answers.
+A Socratic tutor that teaches students how to think, not what to answer. Designed for STEM and the Trivium — any domain where real learning is recognition and application, not memorization and retrieval.
 
-## Core Concept
+Named after Socrates, who never gave answers. He asked questions until the student discovered what they already knew — or caught themselves not knowing what they thought they did. The method was the lesson.
 
-A didactic transformer — architecturally honest, small enough to run on a laptop, big enough to be coherent. Every component implemented from scratch and instrumented to narrate itself.
+## The Core Problem
 
-## Progressive Disclosure (Core Design Principle)
+AI has collapsed the distance between not knowing and having the answer. A student can paste an algebra problem and get a solution in seconds. Tests were already a weak proxy for learning. Now they're nearly meaningless.
 
-The system teaches you until you don't need the teaching anymore, then gets out of the way.
+The solution is not to block AI. It's to build an AI that cannot be shortcut — because the path through it *is* the learning.
 
-- **Novice mode** — every layer explained, annotated, visual. Tokens forming, attention weights lighting up, probability distributions collapsing into word choices
-- **Intermediate mode** — summarizes rather than narrates. Shows the interesting parts, skips the mechanical ones
-- **Expert mode** — clean output. The instrumentation is always one click away if you want to dive back in
+## Core Constraint
 
-## Audience
+**The system never gives the answer. It only gives the next question.**
 
-Primary: curious people with a CS background who haven't touched ML yet. Secondary: non-technical people who want to understand what an LLM actually is.
+A student who can recognize "this is a linear equation and I'm isolating a variable" before touching the algebra has learned something a student who just executes steps hasn't. Recognition is the real learning. Execution is almost incidental.
 
-## Architecture
+## What It Actually Teaches
 
-Build every component from scratch, small but real:
+Not answers. Not formulas. **Recognition and transfer.**
 
-1. **Tokenizer** — how raw text becomes tokens
-2. **Embeddings** — how tokens become vectors
-3. **Attention heads** — how the model relates tokens to each other
-4. **Feed-forward layers** — transformation at each position
-5. **Softmax sampling** — how the probability distribution collapses into a word choice
-6. **Output** — how it all comes together
+- Physics isn't memorizing F = ma. It's recognizing which problems F = ma applies to.
+- Algebra isn't executing steps. It's identifying what kind of problem you're looking at.
+- Logic isn't remembering fallacy names. It's spotting the structure of an argument.
+- Rhetoric isn't vocabulary. It's reading what a situation calls for.
 
-Each component:
-- Is implemented honestly (no black boxes)
-- Can narrate what it's doing
-- Can be inspected on demand
-- Gets quieter as the user learns
+Tests measure retrieval. This measures transfer — the ability to apply knowledge in contexts you haven't seen before. That's the thing education has always struggled to develop, and almost never measures.
 
-## Interactive Experience
+## Metacognition as a First-Class Feature
 
-Two modes working together:
+The system's primary goal is to make the student aware of their own learning.
 
-1. **The artifact is the explanation** — as you type a prompt, it shows what's happening at each stage in real time alongside the output
-2. **Guided curriculum** — work through concepts sequentially; the interactive model is the teaching tool at each stage
+Not through dashboards or progress bars — those are hollow and students see through them. Through *engineered moments of self-discovery*: handing a student back a problem they struggled with three weeks ago and watching them solve it in two minutes. Asking a question that makes them realize they know something they didn't know they knew.
 
-## License
+The awareness is not delivered. It is provoked.
 
-Apache 2.0 — permissive, patent grant included, no friction for researchers or collaborators.
+## Two Surfaces, One Engine
+
+**Student side — the Socratic tutor**
+- Student inputs a problem
+- System classifies the concept domain internally (never tells the student)
+- Dialogue begins: questions only, no answers
+- System guides the student to recognize the problem type and appropriate approach
+- Session ends when the student has demonstrated recognition
+- Over time, builds a persistent model of this student's patterns — where they stall, where they reach for the wrong tool, when they're ready for something harder
+
+**Teacher side — curriculum scaffolding**
+- Teacher uploads their textbook. The system extracts the concept map: problem types, domains, prerequisites, sequencing. The teacher does not build this manually.
+- Teacher does not write questions — the system handles dialogue
+- The teacher's remaining job is the human one: understanding where their students are mentally. Not who got the right answer — who is stuck at recognition, who is ready to go deeper, who is applying the right tool to the wrong problem type.
+- That's information standardized testing has never provided, and it's the information a good teacher actually needs
+
+## Domain Focus
+
+- **STEM** — mathematics, physics, chemistry, biology. Anywhere formulas exist to be applied, not memorized.
+- **Trivium** — grammar, logic, rhetoric. The classical framework for structured thought.
+- Not limited to these — the domain is whatever curriculum the teacher uploads. STEM and the Trivium are the initial focus, not a hard boundary.
+
+Designed to integrate into existing educational institutions. Schools do not have to abandon their curriculum. They plug this in for the part standardized education was never good at: the individual, longitudinal relationship with a specific student's mind.
+
+## Architecture (Conceptual)
+
+- A concept graph per domain, defined or imported by the teacher
+- A student model, updated per session, tracking recognition patterns not scores
+- A dialogue engine with one hard constraint: questions only
+- A metacognitive layer that engineers moments of self-discovery, not reports on progress
+
+## What Makes This Different
+
+Every other AI tutor is a sophisticated answer machine. This one is structurally incapable of being one. The Socratic constraint is not a feature — it is the architecture.
+
+## First Version
+
+One subject. One concept domain. One student flow.
+
+Algebra: student inputs a problem, system guides them through recognition via dialogue, session ends when student has identified problem type and approach. No teacher dashboard yet. No longitudinal tracking. Just prove the dialogue works.
 
 ## Influences
 
-- **Socrates** — taught through exposure, made the process visible, never claimed to know everything
+- **Socrates** — never wrote anything down, taught entirely through questions, made the student do the work of arriving at the answer
 - **Feynman** — if you can't explain it simply, you don't understand it
-- **Paracelsus** — direct observation over received authority
+- **The Trivium** — grammar, logic, rhetoric as a framework for structured thought, not a set of rules to memorize
 - **Euclid** — progressive disclosure, every theorem earned before the next is introduced
 
-## Named After
+## License
 
-Socrates — who never wrote anything down, taught entirely through questions, and made the student do the work of arriving at the answer. The method *was* the lesson.
-
-## Next Steps
-
-1. Draft README
-2. Define repo structure
-3. Build tokenizer first — it's the most visual and tangible entry point
-4. Instrument each layer as it's built
-5. Build the progressive disclosure UI last
-
-# CLAUDE.md — SocraticLLM
-
-This file is read by Claude Code at session start. It is the source of truth for project state, decisions, and next steps. Update it after each meaningful session.
-
----
-
-## What This Project Is
-
-SocraticLLM is an educational transformer implementation that exposes its own internals as a user interacts with it. Every component is built from scratch and instrumented to narrate what it's doing. The goal is not just to show how transformers work — it's to make the learner's growing understanding visible to themselves.
-
-Full vision: `VISION.md`
-
----
-
-## Core Design Decisions (do not relitigate without flagging)
-
-**1. Persistent learner state is the primary product.**
-The model doesn't change through interaction — the learner does. That change should be made explicit: a structured learner profile tracks concept exposure, confidence, and friction points. It gets injected into each session as context and displayed to the learner so they can watch their own conceptual map evolve. Schema lives at `learner/state.json`.
-
-**2. Progressive disclosure over fixed curriculum.**
-The system adapts verbosity to the learner's state. Three modes: novice (everything narrated), intermediate (summarized), expert (clean output, instrumentation one click away). The learner's `disclosure_level` in state.json drives this.
-
-**3. Build order follows conceptual dependency.**
-Tokenizer → Embeddings → Attention → Feed-forward → Softmax → Output. Don't skip ahead. Each component must be instrumented before the next is started.
-
-**4. No black boxes.**
-Every component is implemented from scratch in Python. No importing `transformers` or similar. NumPy and PyTorch for tensor ops only.
-
-**5. Python, small but real.**
-Small enough to run on a laptop CPU. Big enough to produce coherent (if limited) output. Exact model size TBD — decide when embeddings are scoped.
-
----
-
-## Repo Structure (target)
-
-```
-SocraticLLM/
-├── CLAUDE.md               # this file
-├── VISION.md               # full project vision
-├── README.md               # not yet written
-├── learner/
-│   ├── state.json          # persistent learner state (see schema below)
-│   └── history/            # per-session snapshots of state.json
-├── model/
-│   ├── tokenizer.py        # component 1
-│   ├── embeddings.py       # component 2
-│   ├── attention.py        # component 3
-│   ├── feedforward.py      # component 4
-│   ├── softmax.py          # component 5
-│   └── model.py            # assembles components
-├── narration/
-│   └── narrator.py         # the instrumentation layer; wraps each component
-├── ui/
-│   └── ...                 # progressive disclosure UI — build last
-├── tests/
-│   └── ...
-└── requirements.txt
-```
-
----
-
-## Learner State Schema
-
-`learner/state.json` is injected into each session and updated at the end. It is also surfaced in the UI so learners can inspect their own progress.
-
-```json
-{
-  "learner_state": {
-    "version": "0.1",
-    "last_updated": "",
-    "session_count": 0,
-
-    "concept_map": {
-      "tokenization": {
-        "status": "not_yet",
-        "confidence": null,
-        "notes": null
-      },
-      "embeddings": {
-        "status": "not_yet",
-        "confidence": null,
-        "notes": null
-      },
-      "attention": {
-        "status": "not_yet",
-        "confidence": null,
-        "notes": null
-      },
-      "feedforward": {
-        "status": "not_yet",
-        "confidence": null,
-        "notes": null
-      },
-      "softmax": {
-        "status": "not_yet",
-        "confidence": null,
-        "notes": null
-      }
-    },
-
-    "friction_log": [],
-
-    "open_questions": [],
-
-    "preferred_explanation_style": {
-      "analogies": null,
-      "math": null,
-      "code": null
-    },
-
-    "disclosure_level": "novice"
-  }
-}
-```
-
-`status` values: `not_yet` | `encountered` | `working`
-`confidence` values: `low` | `medium` | `high` | `null`
-
----
-
-## Current State
-
-- [ ] VISION.md written ✓
-- [ ] CLAUDE.md written ✓
-- [ ] Repo structure created
-- [ ] `learner/state.json` initialized
-- [ ] Tokenizer implemented
-- [ ] Tokenizer instrumented
-- [ ] README written
-
-**Last session:** Designed learner state schema and CLAUDE.md structure. Identified persistent learner state as the core product insight, not a side feature.
-
-**Next task:** Scaffold the repo directory structure, initialize `learner/state.json`, then begin `model/tokenizer.py`.
-
----
-
-## Working Conventions
-
-- Update the "Current State" checklist and "Last session" note at the end of every session.
-- Don't start a new component until the previous one has a passing test and working narration hook.
-- When uncertain about a design decision, flag it explicitly rather than picking arbitrarily. Add a `## Open Design Questions` section below if needed.
-
+Apache 2.0 — permissive, patent grant included, no friction for researchers or educators.

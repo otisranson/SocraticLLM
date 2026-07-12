@@ -6,137 +6,151 @@ This file is read by Claude Code at session start. It is the source of truth for
 
 ## What This Project Is
 
-SocraticLLM is an educational transformer implementation that exposes its own internals as a user interacts with it. Every component is built from scratch and instrumented to narrate what it's doing. The goal is not just to show how transformers work — it's to make the learner's growing understanding visible to themselves.
+SocraticLLM is a Socratic tutor: a dialogue system that teaches recognition and transfer, not answers. It never tells the student what to do — only asks the next question — and builds a persistent, longitudinal model of how a specific student thinks. A teacher-side flow turns an uploaded textbook into the concept graph the dialogue runs against, for whatever subject that textbook covers.
 
 Full vision: `VISION.md`
+
+**2026-07-12 pivot:** this project previously pursued a different concept — a from-scratch, self-narrating transformer that taught CS-curious people how LLMs work internally (tokenizer → embeddings → attention → feedforward → softmax, each instrumented to narrate itself). That vision is superseded. The code from that effort has been extracted with full git history into a standalone repo at `~/Projects/didactic-transformer` (local only, no remote yet) and removed from this repo entirely — nothing under `socraticllm/`, `tests/`, or `examples/` exists here anymore. This repo starts that package fresh once the new architecture is scoped.
 
 ---
 
 ## Core Design Decisions (do not relitigate without flagging)
 
-**1. Persistent learner state is the primary product.**
-The model doesn't change through interaction — the learner does. That change should be made explicit: a structured learner profile tracks concept exposure, confidence, and friction points. It gets injected into each session as context and displayed to the learner so they can watch their own conceptual map evolve. Schema lives at `learner/state.json`.
+**1. The hard constraint: the system never gives the answer, only the next question.**
+This is architectural, not a prompt-level suggestion — a guardrail layer validates every dialogue turn and rejects/retries anything that leaks an answer. This is what makes the product different from an AI tutor that happens to be phrased as questions.
 
-**2. Progressive disclosure over fixed curriculum.**
-The system adapts verbosity to the learner's state. Three modes: novice (everything narrated), intermediate (summarized), expert (clean output, instrumentation one click away). The learner's `disclosure_level` in state.json drives this.
+**2. Persistent student model is the primary product.**
+The model's own weights don't change through interaction — the student does. That change is tracked explicitly: a structured student profile records recognition patterns, stall points, and friction per concept, scoped per curriculum (a student may work through more than one). It should be surfaced to the student so they can watch their own growth, and to the teacher so they can see where a class is actually stuck. Schema below; lives at `learner/state.json` (path/name likely to change — see Open Design Questions).
 
-**3. Build order follows conceptual dependency.**
-Tokenizer → Embeddings → Attention → Feed-forward → Softmax → Output. Don't skip ahead. Each component must be instrumented before the next is started.
+**3. Curriculum is whatever textbook the teacher uploads — not a fixed domain list.**
+STEM and the Trivium are the initial focus because they're recognition-heavy, not a hard boundary. If a teacher uploads a book on LLMs, "LLMs" is the curriculum. The system extracts the concept graph (concepts, prerequisites, sequencing) from the source text; the teacher doesn't hand-build it.
 
-**4. No black boxes.**
-Every component is implemented from scratch in Python. No importing `transformers` or similar. NumPy and PyTorch for tensor ops only.
+**4. The dialogue engine calls an existing LLM API — it does not run a self-hosted model.**
+Confirmed 2026-07-12. The engineering effort goes into the concept graph, the guardrail that enforces the questions-only constraint, and the student model — not into model internals. This also means the from-scratch transformer code from the prior vision is not a dependency of this product.
 
-**5. Python, small but real.**
-Small enough to run on a laptop CPU. Big enough to produce coherent (if limited) output. Exact model size TBD — decide when embeddings are scoped.
+**5. Two surfaces, one engine; student side ships first.**
+Student-side dialogue is v1. Teacher-side curriculum upload and dashboard follow once the dialogue loop is proven — per `VISION.md`'s own "First Version" scoping (no teacher dashboard yet, no longitudinal tracking yet).
 
 ---
 
 ## Repo Structure (target)
 
+Not yet scaffolded. Proposed shape, reflecting "two surfaces, one engine":
+
 ```
 SocraticLLM/
-├── CLAUDE.md               # this file
-├── VISION.md               # full project vision
-├── README.md               # not yet written
-├── learner/
-│   ├── state.json          # persistent learner state (see schema below)
-│   └── history/            # per-session snapshots of state.json
-├── model/
-│   ├── tokenizer.py        # component 1
-│   ├── embeddings.py       # component 2
-│   ├── attention.py        # component 3
-│   ├── feedforward.py      # component 4
-│   ├── softmax.py          # component 5
-│   └── model.py            # assembles components
-├── narration/
-│   └── narrator.py         # the instrumentation layer; wraps each component
-├── ui/
-│   └── ...                 # progressive disclosure UI — build last
-├── tests/
-│   └── ...
-└── requirements.txt
+├── CLAUDE.md
+├── VISION.md
+├── README.md
+├── TODO.md
+├── LICENSE
+├── pyproject.toml
+├── socraticllm/
+│   ├── engine/
+│   │   ├── llm_client.py       # wraps the LLM API call used for dialogue
+│   │   ├── dialogue.py         # the Socratic dialogue loop
+│   │   ├── guardrail.py        # enforces the hard constraint: no answer ever leaves this layer
+│   │   └── metacognition.py    # engineers self-discovery moments (e.g. resurfacing a past problem)
+│   ├── curriculum/
+│   │   ├── ingest.py           # accepts an uploaded textbook, extracts raw text
+│   │   ├── concept_graph.py    # schema (Concept, Prerequisite, Domain) + LLM-driven extraction
+│   │   └── store.py            # persistence — one concept graph per uploaded curriculum
+│   ├── student/
+│   │   ├── model.py            # persistent per-student state: recognition patterns, friction, readiness
+│   │   └── session.py          # one problem -> dialogue -> session lifecycle
+│   ├── teacher/
+│   │   └── dashboard.py        # deferred past v1
+│   └── interface/
+│       └── repl.py             # v1 driver, student side only
+├── curricula/                   # gitignored: uploaded source docs + generated concept graphs, one dir per curriculum
+├── learner/                     # existing student-state persistence; schema below needs a redesign pass (see Open Design Questions)
+│   ├── state.json
+│   └── history/
+└── tests/
 ```
 
 ---
 
-## Learner State Schema
+## Student State Schema (redesign in progress)
 
-`learner/state.json` is injected into each session and updated at the end. It is also surfaced in the UI so learners can inspect their own progress.
+`learner/state.json` (path may move to `student/state.json` to match the vocabulary above — undecided) is injected into each session. The prior schema hardcoded a 5-item concept map (tokenization/embeddings/attention/feedforward/softmax) tied to the old vision. Since curriculum is now pluggable, the concept map must be keyed dynamically off whatever concept graph is active, and scoped per curriculum since a student may work through more than one.
+
+Proposed shape — **not yet implemented, not yet reconciled with the file that already exists on disk** (which still has the old fixed schema):
 
 ```json
 {
-  "learner_state": {
-    "version": "0.1",
+  "student_state": {
+    "version": "0.2",
+    "student_id": "",
     "last_updated": "",
     "session_count": 0,
 
-    "concept_map": {
-      "tokenization": {
-        "status": "not_yet",
-        "confidence": null,
-        "notes": null
-      },
-      "embeddings": {
-        "status": "not_yet",
-        "confidence": null,
-        "notes": null
-      },
-      "attention": {
-        "status": "not_yet",
-        "confidence": null,
-        "notes": null
-      },
-      "feedforward": {
-        "status": "not_yet",
-        "confidence": null,
-        "notes": null
-      },
-      "softmax": {
-        "status": "not_yet",
-        "confidence": null,
-        "notes": null
+    "curricula": {
+      "<curriculum_id>": {
+        "concept_map": {
+          "<concept_id>": {
+            "status": "not_yet",
+            "confidence": null,
+            "notes": null,
+            "last_seen": null
+          }
+        },
+        "friction_log": [],
+        "open_questions": []
       }
     },
-
-    "friction_log": [],
-
-    "open_questions": [],
 
     "preferred_explanation_style": {
       "analogies": null,
       "math": null,
       "code": null
-    },
-
-    "disclosure_level": "novice"
+    }
   }
 }
 ```
 
-`status` values: `not_yet` | `encountered` | `working`
+`status` values: `not_yet` | `encountered` | `recognized` (renamed from `working` — VISION.md's language is specifically about *recognition*, not proficiency)
 `confidence` values: `low` | `medium` | `high` | `null`
+
+Dropped from the old schema: `disclosure_level`. That was specific to the old vision's progressive-disclosure-of-internals feature and has no equivalent here.
 
 ---
 
 ## Current State
 
-- [ ] VISION.md written ✓
-- [ ] CLAUDE.md written ✓
-- [ ] Repo structure created
-- [ ] `learner/state.json` initialized
-- [ ] Tokenizer implemented
-- [ ] Tokenizer instrumented
-- [ ] README written
+- [x] VISION.md rewritten for the Socratic-tutor product (consolidated from the now-removed `SOCRATICLLM.md`)
+- [x] CLAUDE.md updated to match (this session)
+- [x] TODO.md updated to match (this session, see below)
+- [x] Legacy transformer code extracted with history to `~/Projects/didactic-transformer` and removed from this repo
+- [ ] Remaining Open Design Questions below resolved
+- [ ] Repo restructured to target shape (`engine/`, `curriculum/`, `student/`, `teacher/`, `interface/`) — not started
+- [ ] Concept graph schema defined
+- [ ] Student state schema redesigned and `learner/state.json` migrated (or moved) to it
+- [ ] LLM client wrapper implemented
+- [ ] Dialogue engine + guardrail (the hard constraint) implemented
+- [ ] First-version curriculum chosen and its concept graph created
+- [ ] Student-side REPL wired end to end
+- [ ] Metacognition layer implemented
+- [ ] Curriculum ingestion pipeline (textbook upload -> concept graph extraction) implemented
+- [ ] Teacher dashboard — explicitly deferred past v1
 
-**Last session:** Designed learner state schema and CLAUDE.md structure. Identified persistent learner state as the core product insight, not a side feature.
+**Last session:** Reconciled a vision fork: `VISION.md` still described the old from-scratch, self-narrating-transformer product, while a separate `SOCRATICLLM.md` (added in a later commit, "Update vision: Socratic tutor...") described an entirely different product — a Socratic dialogue tutor — but had the old CLAUDE.md content accidentally appended to it rather than replacing the old vision cleanly. Confirmed with the user: the Socratic-tutor vision is authoritative, the domain is not fixed to STEM/Trivium/algebra but whatever textbook a teacher uploads, and the dialogue engine will call an existing LLM API rather than a self-hosted model. Consolidated into `VISION.md`, removed `SOCRATICLLM.md`, and rewrote this file and `TODO.md` to match.
 
-**Next task:** Scaffold the repo directory structure, initialize `learner/state.json`, then begin `model/tokenizer.py`.
+Then resolved the legacy-code question: extracted `socraticllm/tokenizer/`, `socraticllm/model/`, `socraticllm/narration/`, `socraticllm/curriculum/lessons.py`, their tests, `examples/repl.py`, and `pyproject.toml` into a standalone repo at `~/Projects/didactic-transformer`, using `git-filter-repo` (installed via `pip install --user --break-system-packages`) so the extracted repo keeps real history for those paths. Two files (`socraticllm/model/attention.py`, `embeddings.py`) had uncommitted working-tree changes that predated this session — a real, tested `Embeddings.forward`/`MultiHeadAttention.forward` implementation that had never been committed — so those were copied into the new repo and committed there before removal here, rather than being lost. `origin` was auto-stripped from the new repo by `git-filter-repo`; it's local-only per the user's choice. The legacy code is now fully removed from this repo (`git rm -r socraticllm tests examples pyproject.toml`), staged but not committed.
+
+**Next task:** Commit the removal (currently staged) once reviewed, then start on the concept graph schema — everything else (student model, dialogue engine) depends on knowing its shape first. See `TODO.md` for the full build order.
+
+---
+
+## Open Design Questions
+
+- **`learner/` vs `student/` naming**, and whether the existing `learner/state.json` (old fixed schema, already has one real entry with `last_updated: 2026-07-12`) gets migrated or replaced.
+- **First-version curriculum scope.** `VISION.md`'s "First Version" section names algebra as the example; the user has since clarified the domain is generic (e.g. a book on LLMs would work equally). Still open: whether v1 hand-authors a small concept graph directly (fastest path to proving the dialogue constraint) or builds the ingestion/extraction pipeline first. Leaning toward hand-authoring first, per `VISION.md`'s own "just prove the dialogue works" framing, but not decided.
 
 ---
 
 ## Working Conventions
 
 - Update the "Current State" checklist and "Last session" note at the end of every session.
-- Don't start a new component until the previous one has a passing test and working narration hook.
-- When uncertain about a design decision, flag it explicitly rather than picking arbitrarily. Add a `## Open Design Questions` section below if needed.
-
+- Don't start a new component until the previous one has a passing test.
+- When uncertain about a design decision, flag it explicitly rather than picking arbitrarily — add to `## Open Design Questions` above.
