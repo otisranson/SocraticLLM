@@ -10,7 +10,7 @@ SocraticLLM is a Socratic tutor: a dialogue system that teaches recognition and 
 
 Full vision: `VISION.md`
 
-**2026-07-12 pivot:** this project previously pursued a different concept — a from-scratch, self-narrating transformer that taught CS-curious people how LLMs work internally (tokenizer → embeddings → attention → feedforward → softmax, each instrumented to narrate itself). That vision is superseded. The code from that effort has been extracted with full git history into a standalone repo at `~/Projects/didactic-transformer` (local only, no remote yet) and removed from this repo entirely — nothing under `socraticllm/`, `tests/`, or `examples/` exists here anymore. This repo starts that package fresh once the new architecture is scoped.
+**2026-07-12 pivot:** this project previously pursued a different concept — a from-scratch, self-narrating transformer that taught CS-curious people how LLMs work internally (tokenizer → embeddings → attention → feedforward → softmax, each instrumented to narrate itself). That vision is superseded. The code from that effort has been extracted with full git history into a standalone repo at `~/Projects/didactic-transformer` (local only, no remote yet) and removed from this repo entirely. `socraticllm/` and `tests/` exist again as of this session, but freshly — they hold only new-vision code (the concept graph so far), not any of the extracted legacy code. `examples/` does not exist here anymore.
 
 ---
 
@@ -137,7 +137,9 @@ Dropped from the old schema: `disclosure_level`. That was specific to the old vi
 
 **Last session:** Reconciled a vision fork: `VISION.md` still described the old from-scratch, self-narrating-transformer product, while a separate `SOCRATICLLM.md` (added in a later commit, "Update vision: Socratic tutor...") described an entirely different product — a Socratic dialogue tutor — but had the old CLAUDE.md content accidentally appended to it rather than replacing the old vision cleanly. Confirmed with the user: the Socratic-tutor vision is authoritative, the domain is not fixed to STEM/Trivium/algebra but whatever textbook a teacher uploads, and the dialogue engine will call an existing LLM API rather than a self-hosted model. Consolidated into `VISION.md`, removed `SOCRATICLLM.md`, and rewrote this file and `TODO.md` to match.
 
-Then resolved the legacy-code question: extracted `socraticllm/tokenizer/`, `socraticllm/model/`, `socraticllm/narration/`, `socraticllm/curriculum/lessons.py`, their tests, `examples/repl.py`, and `pyproject.toml` into a standalone repo at `~/Projects/didactic-transformer`, using `git-filter-repo` (installed via `pip install --user --break-system-packages`) so the extracted repo keeps real history for those paths. Two files (`socraticllm/model/attention.py`, `embeddings.py`) had uncommitted working-tree changes that predated this session — a real, tested `Embeddings.forward`/`MultiHeadAttention.forward` implementation that had never been committed — so those were copied into the new repo and committed there before removal here, rather than being lost. `origin` was auto-stripped from the new repo by `git-filter-repo`; it's local-only per the user's choice. The legacy code is now fully removed from this repo (`git rm -r socraticllm tests examples pyproject.toml`), staged but not committed.
+Then resolved the legacy-code question: extracted `socraticllm/tokenizer/`, `socraticllm/model/`, `socraticllm/narration/`, `socraticllm/curriculum/lessons.py`, their tests, `examples/repl.py`, and `pyproject.toml` into a standalone repo at `~/Projects/didactic-transformer`, using `git-filter-repo` (installed via `pip install --user --break-system-packages`) so the extracted repo keeps real history for those paths. Two files (`socraticllm/model/attention.py`, `embeddings.py`) had uncommitted working-tree changes that predated this session — a real, tested `Embeddings.forward`/`MultiHeadAttention.forward` implementation that had never been committed — so those were copied into the new repo and committed there before removal here, rather than being lost. `origin` was auto-stripped from the new repo by `git-filter-repo`; it's local-only per the user's choice. The legacy code removal (`git rm -r socraticllm tests examples pyproject.toml`), the VISION/CLAUDE/TODO rewrites, and `learner/` were committed together and pushed (`90d1a72`).
+
+Then rewrote `README.md` (`9e5cc56`) — the old one was a placeholder line from before either vision existed — to describe the Socratic-tutor product, its two-surface architecture, and honest current status.
 
 Then implemented the concept graph schema: `socraticllm/curriculum/concept_graph.py` (`Concept`
 dataclass — id, name, description, an optional `domain` tag for classification, and
@@ -153,7 +155,9 @@ legacy code. Found a working `.venv` already present with pytest installed — t
 issue noted in `TODO.md`'s Environment section appears resolved; `tests/test_concept_graph.py`
 (9 cases: add/get, duplicate-id error, unknown-id error, prerequisite lookup, valid-graph pass,
 dangling-reference error, cycle error, topological order correctness, topological-order-on-cycle
-error) all pass via `.venv/bin/python -m pytest`.
+error) all pass via `.venv/bin/python -m pytest`. Committed and pushed (`339915a`).
+
+All work through this session is committed and pushed; working tree is clean.
 
 **Next task:** Student state schema — redesign `learner/state.json` so `concept_map` keys
 reference `ConceptGraph` concept ids per curriculum (see the proposed shape in the Student State
