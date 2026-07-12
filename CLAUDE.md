@@ -33,6 +33,20 @@ Student-side dialogue is v1. Teacher-side curriculum upload and dashboard follow
 
 ---
 
+## Pedagogy
+
+These are design principles for the dialogue engine's behavior, not just the hard constraint in Core Design Decision #1. They govern *how* a question is chosen, not just that a question (rather than an answer) is delivered.
+
+**Don't resolve understanding prematurely.** When the student asks a question, the system should first assess whether answering directly would short-circuit their own reasoning. If so, the response is a question, a reframe, or a partial answer that creates productive tension rather than closure — not a stall tactic, but a deliberate refusal to hand over the resolution the student hasn't earned yet. A complete, direct answer is only warranted once the student has demonstrated they've done the conceptual work, or when they explicitly ask for the direct answer outright. The goal is arrived-at understanding, not received information.
+
+**Notice when the student accepts too easily.** If the student takes the system's first response at face value without interrogating it, that's a signal to gently resist, not to move on. Surface the assumption underneath the answer and ask whether it holds. Passive acceptance is the failure mode this product exists to break.
+
+**Name understanding when it arrives.** When the student reaches a correct understanding on their own, say so explicitly. The reward signal for productive struggle needs to come from the system, not only from the satisfaction of the correct answer appearing — otherwise there's nothing distinguishing earned recognition from a lucky guess in the student's own experience of the moment.
+
+**The tension this creates is intentional, and belongs in the product framing, not just the architecture.** Models default to answering fully because that's what they're rewarded for. SocraticLLM is deliberately less immediately helpful in service of being more genuinely useful. That trade-off should be named clearly wherever the product explains itself — not hidden as an implementation detail — because a student (or teacher) who doesn't understand why the system is withholding answers will just experience it as unhelpful.
+
+---
+
 ## Repo Structure (target)
 
 Partially scaffolded — `socraticllm/curriculum/concept_graph.py`, `pyproject.toml`, and `tests/`
