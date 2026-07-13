@@ -24,10 +24,17 @@ Build in this order — each step unblocks the next:
    around `anthropic.Anthropic().messages.create()` (default model `claude-opus-4-8`, adaptive
    thinking on). `anthropic` added as a real dependency. `tests/test_llm_client.py` passing
    (2 cases, injectable fake client — no real API calls in tests).
-5. **Dialogue engine + guardrail** — `socraticllm/engine/dialogue.py` and
-   `socraticllm/engine/guardrail.py`. The guardrail enforces the hard constraint (no answer ever
-   leaves this layer) — this is the core differentiator and should be solid, with real test
-   cases of leaked-answer attempts, before anything user-facing is built on top of it.
+5. **Guardrail** — first pass done. `socraticllm/engine/guardrail.py`: `check(response)` /
+   `GuardrailResult`, structural/heuristic (declarative "the answer is"/"the solution is"
+   phrasing, "Answer:"/"Final answer:" labels, "so/therefore the answer..." conclusions,
+   multi-step "Step 1: ... Step 2: ..." walkthroughs). No `Problem`/expected-answer model exists
+   yet, so this pass checks the *shape* of a response, not whether its content is factually the
+   answer to a specific problem — a semantic, LLM-judge-based layer is a deliberate follow-up
+   (see CLAUDE.md's Open Design Questions). `tests/test_guardrail.py` passing (17 cases: 11
+   leaked-answer attempts rejected, 6 legitimate Socratic responses passed).
+   **Dialogue engine** — `socraticllm/engine/dialogue.py`, still to do: wires `LLMClient` +
+   the guardrail + the concept graph into a turn loop, including a retry strategy for guardrail
+   rejections (not yet designed).
 6. **First-version curriculum content.** Hand-author a small concept graph for one subject
    directly (skip the ingestion pipeline for now) — fastest path to proving the dialogue
    constraint works end to end, per `VISION.md`'s own "First Version" framing. Which subject is
