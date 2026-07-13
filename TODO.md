@@ -39,7 +39,13 @@ Build in this order — each step unblocks the next:
    fixed fallback response if retries are exhausted — the hard constraint always holds. No
    `ConceptGraph` dependency yet (no `Problem`/session model exists to select a concept from) —
    takes an optional `curriculum_context: str` hook instead. `tests/test_dialogue.py` passing
-   (5 cases).
+   (5 cases). A code review afterward found and fixed 3 confirmed correctness bugs: a dangling
+   `self.history` entry when the LLM call raised mid-turn (broke the *next* turn's role
+   alternation), an uncaught `StopIteration` in `LLMClient.complete()` when the model emitted no
+   text block (now a clear `NoTextResponseError`), and `FALLBACK_RESPONSE` bypassing the guardrail
+   entirely (now checked too, with a `RuntimeError` safety net if it ever fails). See CLAUDE.md's
+   Open Design Questions for the 6 lower-priority findings left unfixed. `tests/test_dialogue.py`
+   and `tests/test_llm_client.py` passing (42 total tests).
 6. **First-version curriculum content.** Hand-author a small concept graph for one subject
    directly (skip the ingestion pipeline for now) — fastest path to proving the dialogue
    constraint works end to end, per `VISION.md`'s own "First Version" framing. Which subject is

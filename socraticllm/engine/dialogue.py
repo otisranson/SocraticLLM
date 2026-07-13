@@ -61,18 +61,30 @@ class DialogueEngine:
         self.history: list[dict[str, str]] = []
 
     def ask(self, student_message: str) -> DialogueTurn:
-        self.history.append({"role": "user", "content": student_message})
-
-        messages = list(self.history)
+        # `self.history` is only mutated once a final outcome exists (below) —
+        # never before the LLM call — so an exception from `complete()` (a
+        # network error, or NoTextResponseError) leaves history untouched
+        # instead of a dangling user turn with no reply, which would break
+        # role alternation on the next call.
+        user_turn = {"role": "user", "content": student_message}
+        messages = [*self.history, user_turn]
         retries = 0
         while True:
             candidate = self._llm.complete(system=self._system_prompt, messages=messages)
             result = check(candidate)
             if result.passed:
+                self.history.append(user_turn)
                 self.history.append({"role": "assistant", "content": candidate})
                 return DialogueTurn(response=candidate, guardrail_retries=retries)
 
             if retries >= MAX_GUARDRAIL_RETRIES:
+                # FALLBACK_RESPONSE still passes through the guardrail, same as
+                # any other candidate — this is a hardcoded constant that should
+                # always pass (see tests/test_dialogue.py), but a future edit to
+                # it must not be able to silently bypass the hard constraint.
+                if not check(FALLBACK_RESPONSE).passed:
+                    raise RuntimeError("FALLBACK_RESPONSE itself fails the guardrail — fix the constant")
+                self.history.append(user_turn)
                 self.history.append({"role": "assistant", "content": FALLBACK_RESPONSE})
                 return DialogueTurn(response=FALLBACK_RESPONSE, guardrail_retries=retries)
 

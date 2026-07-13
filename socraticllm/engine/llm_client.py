@@ -14,6 +14,14 @@ DEFAULT_MODEL = "claude-opus-4-8"
 DEFAULT_MAX_TOKENS = 2048
 
 
+class NoTextResponseError(Exception):
+    """Raised when an API response has no text content block to return.
+
+    Can happen if the model spends its whole token budget on thinking and
+    never emits text — a plain StopIteration here would be a confusing crash.
+    """
+
+
 class LLMClient:
     def __init__(
         self,
@@ -36,4 +44,10 @@ class LLMClient:
             thinking={"type": "adaptive"},
             messages=messages,
         )
-        return next(block.text for block in response.content if block.type == "text")
+        for block in response.content:
+            if block.type == "text":
+                return block.text
+        raise NoTextResponseError(
+            f"no text block in response (stop_reason={response.stop_reason!r}); "
+            f"block types present: {[block.type for block in response.content]}"
+        )

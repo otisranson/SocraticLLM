@@ -1,4 +1,7 @@
+import pytest
+
 from socraticllm.engine.dialogue import FALLBACK_RESPONSE, MAX_GUARDRAIL_RETRIES, DialogueEngine
+from socraticllm.engine.guardrail import check
 
 
 class ScriptedLLMClient:
@@ -9,6 +12,19 @@ class ScriptedLLMClient:
     def complete(self, system, messages, max_tokens=2048):
         self.calls.append({"system": system, "messages": messages, "max_tokens": max_tokens})
         return next(self._responses)
+
+
+class FlakyLLMClient:
+    """Raises on any queued `None`, otherwise returns the queued string."""
+
+    def __init__(self, responses: list[str | None]) -> None:
+        self._responses = iter(responses)
+
+    def complete(self, system, messages, max_tokens=2048):
+        response = next(self._responses)
+        if response is None:
+            raise RuntimeError("simulated API failure")
+        return response
 
 
 def test_passing_response_is_used_directly():
@@ -70,3 +86,39 @@ def test_curriculum_context_is_folded_into_system_prompt():
     engine.ask("How do I solve for x?")
 
     assert "Linear equations: isolating a variable." in llm.calls[0]["system"]
+
+
+def test_history_untouched_when_llm_call_raises():
+    engine = DialogueEngine(llm_client=FlakyLLMClient([None]))
+
+    with pytest.raises(RuntimeError, match="simulated API failure"):
+        engine.ask("What's x?")
+
+    assert engine.history == []
+
+
+def test_can_ask_again_after_a_failed_turn():
+    # A prior failed ask() must not leave a dangling user turn that would
+    # break role alternation on the next call.
+    llm = FlakyLLMClient([None, "What have you tried so far?"])
+    engine = DialogueEngine(llm_client=llm)
+
+    with pytest.raises(RuntimeError):
+        engine.ask("What's x?")
+    turn = engine.ask("What's x?")
+
+    assert turn.response == "What have you tried so far?"
+    assert [m["role"] for m in engine.history] == ["user", "assistant"]
+
+
+def test_fallback_response_itself_passes_the_guardrail():
+    assert check(FALLBACK_RESPONSE).passed is True
+
+
+def test_raises_if_fallback_response_would_fail_the_guardrail(monkeypatch):
+    monkeypatch.setattr("socraticllm.engine.dialogue.check", lambda _response: check("The answer is 4."))
+    llm = ScriptedLLMClient(["The answer is 4."] * (MAX_GUARDRAIL_RETRIES + 1))
+    engine = DialogueEngine(llm_client=llm)
+
+    with pytest.raises(RuntimeError, match="FALLBACK_RESPONSE itself fails the guardrail"):
+        engine.ask("What's x?")

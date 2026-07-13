@@ -1,4 +1,7 @@
+import pytest
+
 from socraticllm.engine import LLMClient
+from socraticllm.engine.llm_client import NoTextResponseError
 
 
 class FakeBlock:
@@ -8,8 +11,9 @@ class FakeBlock:
 
 
 class FakeResponse:
-    def __init__(self, content: list[FakeBlock]) -> None:
+    def __init__(self, content: list[FakeBlock], stop_reason: str = "end_turn") -> None:
         self.content = content
+        self.stop_reason = stop_reason
 
 
 class FakeMessages:
@@ -48,3 +52,12 @@ def test_complete_passes_model_and_messages_through():
     assert call["system"] == "sys"
     assert call["messages"] == [{"role": "user", "content": "hi"}]
     assert call["max_tokens"] == 512
+
+
+def test_complete_raises_clear_error_when_no_text_block():
+    response = FakeResponse([FakeBlock("thinking", "")], stop_reason="max_tokens")
+    fake_client = FakeAnthropicClient(response)
+    llm = LLMClient(client=fake_client)
+
+    with pytest.raises(NoTextResponseError, match="max_tokens"):
+        llm.complete(system="sys", messages=[{"role": "user", "content": "hi"}])
