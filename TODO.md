@@ -32,9 +32,14 @@ Build in this order — each step unblocks the next:
    answer to a specific problem — a semantic, LLM-judge-based layer is a deliberate follow-up
    (see CLAUDE.md's Open Design Questions). `tests/test_guardrail.py` passing (17 cases: 11
    leaked-answer attempts rejected, 6 legitimate Socratic responses passed).
-   **Dialogue engine** — `socraticllm/engine/dialogue.py`, still to do: wires `LLMClient` +
-   the guardrail + the concept graph into a turn loop, including a retry strategy for guardrail
-   rejections (not yet designed).
+   **Dialogue engine** — done. `socraticllm/engine/dialogue.py`: `DialogueEngine` wires
+   `LLMClient` + the guardrail into a turn loop (`ask()` / `DialogueTurn`), with a system prompt
+   translating the Pedagogy section into instructions, retry-then-corrective-nudge on a guardrail
+   rejection (up to `MAX_GUARDRAIL_RETRIES` = 2, never committed to permanent history), and a
+   fixed fallback response if retries are exhausted — the hard constraint always holds. No
+   `ConceptGraph` dependency yet (no `Problem`/session model exists to select a concept from) —
+   takes an optional `curriculum_context: str` hook instead. `tests/test_dialogue.py` passing
+   (5 cases).
 6. **First-version curriculum content.** Hand-author a small concept graph for one subject
    directly (skip the ingestion pipeline for now) — fastest path to proving the dialogue
    constraint works end to end, per `VISION.md`'s own "First Version" framing. Which subject is
