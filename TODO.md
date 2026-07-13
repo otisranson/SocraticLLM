@@ -20,9 +20,10 @@ Build in this order — each step unblocks the next:
    `CurriculumProgress`, `ConceptProgress` dataclasses, dynamic per-curriculum `concept_map`
    keyed off `ConceptGraph` concept ids (via `ensure_curriculum()`), `load()`/`save()`.
    `tests/test_student_model.py` passing (4 cases).
-4. **LLM client wrapper** — `socraticllm/engine/llm_client.py`. Thin wrapper around the API
-   call used for dialogue. No model-internals work here — confirmed the dialogue engine calls an
-   existing LLM API, not a self-hosted model.
+4. **LLM client wrapper** — done. `socraticllm/engine/llm_client.py`: `LLMClient`, a thin wrapper
+   around `anthropic.Anthropic().messages.create()` (default model `claude-opus-4-8`, adaptive
+   thinking on). `anthropic` added as a real dependency. `tests/test_llm_client.py` passing
+   (2 cases, injectable fake client — no real API calls in tests).
 5. **Dialogue engine + guardrail** — `socraticllm/engine/dialogue.py` and
    `socraticllm/engine/guardrail.py`. The guardrail enforces the hard constraint (no answer ever
    leaves this layer) — this is the core differentiator and should be solid, with real test
