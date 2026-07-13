@@ -46,10 +46,13 @@ Build in this order — each step unblocks the next:
    entirely (now checked too, with a `RuntimeError` safety net if it ever fails). See CLAUDE.md's
    Open Design Questions for the 6 lower-priority findings left unfixed. `tests/test_dialogue.py`
    and `tests/test_llm_client.py` passing (42 total tests).
-6. **First-version curriculum content.** Hand-author a small concept graph for one subject
-   directly (skip the ingestion pipeline for now) — fastest path to proving the dialogue
-   constraint works end to end, per `VISION.md`'s own "First Version" framing. Which subject is
-   still open (algebra was the example in `VISION.md`; not a requirement).
+6. **First-version curriculum content** — done. Chose algebra (linear equations), matching
+   `VISION.md`'s own example. `socraticllm/curriculum/algebra_1.py`: `build_algebra_1()` returns a
+   fresh, validated `ConceptGraph` (id `"algebra-1"`) with 8 concepts forming a recognition ladder
+   from `variables`/`equality`/`inverse-operations`/`like-terms` (foundations) through
+   `one-step-equations` → `two-step-equations` → `multi-step-equations` → `systems-of-equations`.
+   Re-exported from `socraticllm/curriculum/__init__.py`. `tests/test_algebra_1.py` passing
+   (5 cases). Not yet wired into `DialogueEngine` — that's step 7.
 7. **Student-side interface** — `socraticllm/interface/repl.py`. Wire concept graph + student
    model + dialogue engine + guardrail together into one working loop: student states a problem,
    dialogue proceeds via questions only, session ends on demonstrated recognition, student state
