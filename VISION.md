@@ -12,6 +12,8 @@ AI has collapsed the distance between not knowing and having the answer. A stude
 
 The solution is not to block AI. It's to build an AI that cannot be shortcut — because the path through it *is* the learning.
 
+External articles that speak to this problem are collected in `REFERENCES.md`.
+
 ## Core Constraint
 
 **The system never gives the answer. It only gives the next question.**

@@ -148,6 +148,8 @@ Dropped from the old schema: `disclosure_level`. That was specific to the old vi
 - [ ] Metacognition layer implemented
 - [ ] Curriculum ingestion pipeline (textbook upload -> concept graph extraction) implemented
 - [ ] Teacher dashboard — explicitly deferred past v1
+- [x] `REFERENCES.md` created (external articles supporting the problem statement); `VISION.md` points to it
+- [x] References populated — 5 entries, added manually by the user (see Last session)
 
 **Last session:** Reconciled a vision fork: `VISION.md` still described the old from-scratch, self-narrating-transformer product, while a separate `SOCRATICLLM.md` (added in a later commit, "Update vision: Socratic tutor...") described an entirely different product — a Socratic dialogue tutor — but had the old CLAUDE.md content accidentally appended to it rather than replacing the old vision cleanly. Confirmed with the user: the Socratic-tutor vision is authoritative, the domain is not fixed to STEM/Trivium/algebra but whatever textbook a teacher uploads, and the dialogue engine will call an existing LLM API rather than a self-hosted model. Consolidated into `VISION.md`, removed `SOCRATICLLM.md`, and rewrote this file and `TODO.md` to match.
 
@@ -172,6 +174,8 @@ dangling-reference error, cycle error, topological order correctness, topologica
 error) all pass via `.venv/bin/python -m pytest`. Committed and pushed (`339915a`).
 
 All work through this session is committed and pushed; working tree is clean.
+
+**Then:** Created `REFERENCES.md` — a running list of external articles that speak to the problem statement in `VISION.md`, formatted as `[Title](url) — why it's relevant`. Added a pointer to it from `VISION.md`'s "The Core Problem" section. Intended workflow: user pastes an article URL, Claude fetches it via WebFetch, pulls the title, and appends a formatted entry. First attempt (NPR article, `https://www.npr.org/2026/01/28/nx-s1-5631779/ai-schools-teachers-students`) hit a WebFetch timeout, so the user populated all 5 references manually instead: coverage of teachers going analog/banning AI in the classroom (NPR, Edutopia), UChicago Law's device ban for 1Ls (two MSN/Fox pieces), and a Brookings policy overview on ban-vs-integrate approaches. Committed together with the `CLAUDE.md`/`VISION.md` updates.
 
 **Next task:** Student state schema — redesign `learner/state.json` so `concept_map` keys
 reference `ConceptGraph` concept ids per curriculum (see the proposed shape in the Student State
