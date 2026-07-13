@@ -1,0 +1,14 @@
+{
+  "student_state": {
+    "version": "0.2",
+    "student_id": "",
+    "last_updated": null,
+    "session_count": 0,
+    "curricula": {},
+    "preferred_explanation_style": {
+      "analogies": null,
+      "math": null,
+      "code": null
+    }
+  }
+}

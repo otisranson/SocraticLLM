@@ -9,16 +9,17 @@ and removed from here entirely.
 
 Build in this order — each step unblocks the next:
 
-1. **Resolve the remaining Open Design Question in `CLAUDE.md`** — the `learner/` vs `student/`
-   naming, and whether `learner/state.json` (old fixed schema) gets migrated or replaced.
+1. **`learner/` vs `student/` naming** — done. Renamed `learner/` to `student/`; no real data
+   existed in the old `learner/state.json` to migrate.
 2. **Concept graph schema** — done. `socraticllm/curriculum/concept_graph.py`: `Concept`
    (id, name, description, `domain` tag, `prerequisites` as a list of concept ids) and
    `ConceptGraph` (add/get, `prerequisites_of`, `validate()` for dangling refs and cycles,
    `topological_order()`). No separate `Prerequisite`/`Domain` classes — deferred until they need
    their own fields. `tests/test_concept_graph.py` passing (9 cases).
-3. **Student state schema + persistence** — redesign `learner/state.json` per the proposed
-   shape in `CLAUDE.md` (dynamic, per-curriculum `concept_map` instead of the old fixed 5-key
-   one). Implement load/save.
+3. **Student state schema + persistence** — done. `socraticllm/student/model.py`: `StudentState`,
+   `CurriculumProgress`, `ConceptProgress` dataclasses, dynamic per-curriculum `concept_map`
+   keyed off `ConceptGraph` concept ids (via `ensure_curriculum()`), `load()`/`save()`.
+   `tests/test_student_model.py` passing (4 cases).
 4. **LLM client wrapper** — `socraticllm/engine/llm_client.py`. Thin wrapper around the API
    call used for dialogue. No model-internals work here — confirmed the dialogue engine calls an
    existing LLM API, not a self-hosted model.

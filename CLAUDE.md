@@ -78,7 +78,7 @@ SocraticLLM/
 │   └── interface/
 │       └── repl.py             # v1 driver, student side only
 ├── curricula/                   # gitignored: uploaded source docs + generated concept graphs, one dir per curriculum
-├── learner/                     # existing student-state persistence; schema below needs a redesign pass (see Open Design Questions)
+├── student/                     # student-state persistence (data, not code — see socraticllm/student/ above)
 │   ├── state.json
 │   └── history/
 └── tests/
@@ -86,11 +86,11 @@ SocraticLLM/
 
 ---
 
-## Student State Schema (redesign in progress)
+## Student State Schema
 
-`learner/state.json` (path may move to `student/state.json` to match the vocabulary above — undecided) is injected into each session. The prior schema hardcoded a 5-item concept map (tokenization/embeddings/attention/feedforward/softmax) tied to the old vision. Since curriculum is now pluggable, the concept map must be keyed dynamically off whatever concept graph is active, and scoped per curriculum since a student may work through more than one.
+`student/state.json` (moved from `learner/state.json` — see Current State) is injected into each session, and is loaded/saved via `socraticllm/student/model.py` (`StudentState`, `CurriculumProgress`, `ConceptProgress`, `load()`, `save()`). The prior schema hardcoded a 5-item concept map (tokenization/embeddings/attention/feedforward/softmax) tied to the old vision. Since curriculum is now pluggable, the concept map is keyed dynamically off whatever `ConceptGraph` is active (`StudentState.ensure_curriculum(graph)` populates a curriculum's concept map from the graph's concept ids without disturbing existing progress), and scoped per curriculum since a student may work through more than one.
 
-Proposed shape — **not yet implemented, not yet reconciled with the file that already exists on disk** (which still has the old fixed schema):
+Shape (implemented, `tests/test_student_model.py` passing):
 
 ```json
 {
@@ -137,10 +137,10 @@ Dropped from the old schema: `disclosure_level`. That was specific to the old vi
 - [x] CLAUDE.md updated to match (this session)
 - [x] TODO.md updated to match (this session, see below)
 - [x] Legacy transformer code extracted with history to `~/Projects/didactic-transformer` and removed from this repo
-- [ ] Remaining Open Design Questions below resolved
-- [ ] Repo restructured to target shape (`engine/`, `curriculum/`, `student/`, `teacher/`, `interface/`) — `curriculum/` started, rest not yet
+- [x] `learner/` vs `student/` naming resolved — renamed to `student/` (see Open Design Questions)
+- [ ] Repo restructured to target shape (`engine/`, `curriculum/`, `student/`, `teacher/`, `interface/`) — `curriculum/` and `student/` started, rest not yet
 - [x] Concept graph schema defined (`socraticllm/curriculum/concept_graph.py` — `Concept`, `ConceptGraph`; add/get, prerequisite lookup, cycle + dangling-reference validation, topological ordering; tests passing)
-- [ ] Student state schema redesigned and `learner/state.json` migrated (or moved) to it
+- [x] Student state schema redesigned and implemented (`socraticllm/student/model.py`); `learner/state.json` renamed to `student/state.json` and rewritten to the new schema (no real data existed to migrate)
 - [ ] LLM client wrapper implemented
 - [ ] Dialogue engine + guardrail (the hard constraint) implemented
 - [ ] First-version curriculum chosen and its concept graph created
@@ -177,16 +177,14 @@ All work through this session is committed and pushed; working tree is clean.
 
 **Then:** Created `REFERENCES.md` — a running list of external articles that speak to the problem statement in `VISION.md`, formatted as `[Title](url) — why it's relevant`. Added a pointer to it from `VISION.md`'s "The Core Problem" section. Intended workflow: user pastes an article URL, Claude fetches it via WebFetch, pulls the title, and appends a formatted entry. First attempt (NPR article, `https://www.npr.org/2026/01/28/nx-s1-5631779/ai-schools-teachers-students`) hit a WebFetch timeout, so the user populated all 5 references manually instead: coverage of teachers going analog/banning AI in the classroom (NPR, Edutopia), UChicago Law's device ban for 1Ls (two MSN/Fox pieces), and a Brookings policy overview on ban-vs-integrate approaches. Committed together with the `CLAUDE.md`/`VISION.md` updates.
 
-**Next task:** Student state schema — redesign `learner/state.json` so `concept_map` keys
-reference `ConceptGraph` concept ids per curriculum (see the proposed shape in the Student State
-Schema section above) rather than the old fixed 5-key map, and implement load/save. See `TODO.md`
-step 3.
+**Then:** Implemented the student state schema redesign. Confirmed with the user that the existing `learner/state.json` had no real data worth migrating (`session_count: 0`, every concept still `not_yet` — just the old template) and that `learner/` should be renamed to `student/` to match the `socraticllm/student/` module name, resolving the naming open question. `git mv learner student`, then added `socraticllm/student/model.py` (`ConceptProgress`, `CurriculumProgress`, `StudentState` dataclasses; `StudentState.ensure_curriculum(graph)` populates a curriculum's `concept_map` from a `ConceptGraph`'s concept ids without clobbering existing progress; `load()`/`save()` for the JSON file) and `socraticllm/student/__init__.py` re-exporting the public names, mirroring the `socraticllm/curriculum/` package's shape. Regenerated `student/state.json` via `save(StudentState())` so the on-disk file matches the loader's expected format exactly, rather than hand-writing it. `tests/test_student_model.py` (4 cases: missing-file load returns defaults, `ensure_curriculum` populates from a graph, `ensure_curriculum` doesn't overwrite existing progress, save/load round-trip) passes alongside the existing concept graph tests (13 total).
+
+**Next task:** LLM client wrapper (`socraticllm/engine/llm_client.py`) — the next unchecked item in Current State, and the first piece of the dialogue engine. See `TODO.md`.
 
 ---
 
 ## Open Design Questions
 
-- **`learner/` vs `student/` naming**, and whether the existing `learner/state.json` (old fixed schema, already has one real entry with `last_updated: 2026-07-12`) gets migrated or replaced.
 - **First-version curriculum scope.** `VISION.md`'s "First Version" section names algebra as the example; the user has since clarified the domain is generic (e.g. a book on LLMs would work equally). Still open: whether v1 hand-authors a small concept graph directly (fastest path to proving the dialogue constraint) or builds the ingestion/extraction pipeline first. Leaning toward hand-authoring first, per `VISION.md`'s own "just prove the dialogue works" framing, but not decided.
 
 ---
