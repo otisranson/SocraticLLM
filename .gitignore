@@ -3,3 +3,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .venv/
+
+# Proprietary questioning-methodology prompt content — never checked in.
+# See socraticllm/engine/dialogue.py and CLAUDE.md.
+/private/

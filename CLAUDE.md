@@ -45,6 +45,14 @@ These are design principles for the dialogue engine's behavior, not just the har
 
 **The tension this creates is intentional, and belongs in the product framing, not just the architecture.** Models default to answering fully because that's what they're rewarded for. SocraticLLM is deliberately less immediately helpful in service of being more genuinely useful. That trade-off should be named clearly wherever the product explains itself — not hidden as an implementation detail — because a student (or teacher) who doesn't understand why the system is withholding answers will just experience it as unhelpful.
 
+### The attention loop and question-move palette are proprietary — not in this repo
+
+**2026-07-23:** a dedicated session distilled a specific questioning methodology (a macro-level "what to focus on and when to move on" loop, plus a named set of question-move patterns) that goes beyond the three general principles above. This repo is Apache 2.0 (`LICENSE`, public GitHub remote) — trade secret protection is incompatible with checking proprietary content into a publicly licensed repo, so that methodology is **not written here**. It's kept in a private location and, for the dialogue engine, loaded at runtime as an optional prompt overlay (see `socraticllm/engine/dialogue.py`'s `_load_methodology_overlay()` — reads a gitignored local path, `private/methodology_prompt.txt` by default, or `SOCRATICLLM_METHODOLOGY_PATH` if set). Without that file present, the engine still runs on the generic public `SYSTEM_PROMPT` alone.
+
+The user is planning a separate, private repo for the methodology content itself. Until that exists, `private/` is gitignored here and holds the working copy locally.
+
+**Sequencing decision (2026-07-23, not proprietary — general architecture):** `ConceptGraph`'s prerequisite structure acts as a **readiness gate**, not a fixed walk order. A concept can't be surfaced as the next thing to work on until its prerequisites are `recognized` in the student's state — but among whatever's currently unlocked, focus-selection logic (not `topological_order()`) decides which one to pursue and when. `topological_order()` remains useful for validation and for picking a reasonable *first* problem when there's no dialogue history yet to signal from. (The focus-selection logic itself — how "current signal" is represented and how "addressed" is detected — is the proprietary part above; this bullet is just the public-safe shape of how it plugs into `ConceptGraph`.)
+
 ---
 
 ## Repo Structure (target)

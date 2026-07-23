@@ -7,11 +7,22 @@ Problem/session model yet (see Open Design Questions), so this engine takes
 an optional plain-string `curriculum_context` hook rather than a `ConceptGraph`
 dependency — a caller can inject concept-specific framing once that model
 exists, without this module needing to know about `ConceptGraph` itself.
+
+`SYSTEM_PROMPT` below is deliberately the generic, public version of the
+Socratic-tutor instructions — safe to ship in this Apache-2.0 repo. The
+specific questioning methodology (the "attention loop" and named question-move
+patterns — see CLAUDE.md) is proprietary and is never checked in here: it's
+loaded at runtime from a gitignored local path, or wherever
+`SOCRATICLLM_METHODOLOGY_PATH` points, via `_load_methodology_overlay()`. If
+that file doesn't exist (e.g. a clone of the public repo with no private
+overlay), the engine still works — just with the generic prompt only.
 """
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from .guardrail import check
 from .llm_client import LLMClient
@@ -29,6 +40,21 @@ SYSTEM_PROMPT = """You are a Socratic tutor. Follow these rules without exceptio
    explicitly — name what they figured out. The reward for productive
    struggle has to come from you, not just from the answer appearing.
 """
+
+_METHODOLOGY_PATH_ENV_VAR = "SOCRATICLLM_METHODOLOGY_PATH"
+_DEFAULT_METHODOLOGY_PATH = Path("private/methodology_prompt.txt")
+
+
+def _load_methodology_overlay() -> str:
+    """Read the proprietary methodology prompt overlay, if one exists locally.
+
+    Returns "" (no overlay) when the file is absent — this must never raise,
+    since the public repo has to work standalone with no private content.
+    """
+    path = Path(os.environ.get(_METHODOLOGY_PATH_ENV_VAR, _DEFAULT_METHODOLOGY_PATH))
+    if not path.exists():
+        return ""
+    return path.read_text().strip()
 
 MAX_GUARDRAIL_RETRIES = 2
 
@@ -56,6 +82,9 @@ class DialogueEngine:
     ) -> None:
         self._llm = llm_client or LLMClient()
         self._system_prompt = SYSTEM_PROMPT
+        overlay = _load_methodology_overlay()
+        if overlay:
+            self._system_prompt += f"\n\n{overlay}"
         if curriculum_context:
             self._system_prompt += f"\n\nCurrent context: {curriculum_context}"
         self.history: list[dict[str, str]] = []
